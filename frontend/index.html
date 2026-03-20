@@ -19,6 +19,7 @@
       <div class="topbar-right">
         <button class="btn btn-chat" id="btn-chat">Chat</button>
         <button class="btn btn-ghost" id="btn-dashboard">Dashboard</button>
+        <button class="btn btn-ghost" id="btn-skills">Skills</button>
         <button class="btn btn-ghost btn-sm" id="btn-import-agent" title="Import agent from JSON">Import</button>
         <button class="btn btn-primary" id="btn-new-template">+ New Agent</button>
         <button class="btn btn-ghost" id="btn-adhoc-run">Run Ad-hoc</button>
@@ -33,6 +34,7 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-mobile-nav">
           <button class="btn btn-ghost btn-sm" id="btn-dashboard-mob">Dashboard</button>
+          <button class="btn btn-ghost btn-sm" id="btn-skills-mob">Skills</button>
           <button class="btn btn-ghost btn-sm" id="btn-adhoc-mob">Run Ad-hoc</button>
           <button class="btn btn-ghost btn-sm" id="btn-import-mob">Import Agent</button>
         </div>
@@ -123,6 +125,16 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Skills view (hidden by default) -->
+        <div class="skills-view hidden" id="skills-view">
+          <div class="dashboard-header">
+            <h2>Skills</h2>
+            <button class="btn btn-primary btn-sm" id="btn-new-skill">+ New Skill</button>
+          </div>
+          <p class="text-secondary" style="font-size:13px;margin-top:-10px">Reusable building blocks that inject instructions into agents at run time.</p>
+          <div id="skills-grid" class="skills-grid"></div>
         </div>
 
         <!-- Dashboard view (hidden by default) -->
@@ -248,8 +260,17 @@
         </select>
       </div>
       <div class="form-group">
+        <label>Default Goal <span class="text-secondary">(used when no goal is given at run time)</span></label>
+        <textarea id="mt-default-goal" class="input-field textarea" rows="2"
+          placeholder="e.g. Check inbox and summarise new emails"></textarea>
+      </div>
+      <div class="form-group">
         <label>Max Iterations <span class="text-secondary">(tool call steps per run)</span></label>
         <input id="mt-max-iterations" class="input-field" type="number" min="1" max="500" value="100" />
+      </div>
+      <div class="form-group">
+        <label>Skills <span class="text-secondary">(injected into system prompt at run time)</span></label>
+        <div id="mt-skills" class="skills-checkboxes"></div>
       </div>
       <div class="form-group">
         <label>Allowed Tools <span class="text-secondary">(ask_user always enabled)</span></label>
@@ -275,9 +296,9 @@
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>What should the agent do?</label>
+        <label>What should the agent do? <span class="text-secondary">(optional if agent has a default goal)</span></label>
         <textarea id="mr-goal" class="input-field textarea" rows="4"
-          placeholder="Describe the task..."></textarea>
+          placeholder="Leave empty to use the agent's default goal..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -302,6 +323,38 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
       <button class="btn btn-primary" id="import-btn-save">Import</button>
+    </div>
+  </div>
+
+  <!-- Skill create/edit modal -->
+  <div id="modal-skill" class="modal hidden">
+    <div class="modal-header">
+      <h3 id="modal-skill-title">New Skill</h3>
+      <button class="modal-close" onclick="App.closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Name *</label>
+        <input id="sk-name" class="input-field" placeholder="e.g. Send WhatsApp Message" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input id="sk-description" class="input-field" placeholder="What does this skill do?" />
+      </div>
+      <div class="form-group">
+        <label>Prompt Snippet *</label>
+        <textarea id="sk-prompt" class="input-field textarea" rows="8"
+          placeholder="Instructions injected into the agent's system prompt when this skill is included. Be specific about how to use it.&#10;&#10;e.g. To send a WhatsApp message, use the http_request tool with method POST to https://..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Required Tools <span class="text-secondary">(comma-separated, for reference)</span></label>
+        <input id="sk-tools" class="input-field" placeholder="e.g. http_request, run_shell_command" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="sk-btn-delete" style="margin-right:auto" class="hidden">Delete</button>
+      <button class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="sk-btn-save">Save Skill</button>
     </div>
   </div>
 

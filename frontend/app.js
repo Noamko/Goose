@@ -33,6 +33,7 @@ const state = {
   templates: [],
   runs: [],
   tools: [],
+  skills: [],
   activeTemplateId: null,
   activeRunId: null,
   chatOpen: false,
@@ -821,8 +822,10 @@ const App = {
     document.getElementById('mt-system-prompt').value = '';
     document.getElementById('mt-model').value = 'claude-opus-4-6';
     document.getElementById('mt-max-iterations').value = '100';
+    document.getElementById('mt-default-goal').value = '';
     document.getElementById('mt-secrets-list').innerHTML = '';
     renderToolCheckboxes(null);
+    renderSkillCheckboxes([]);
     document.getElementById('mt-btn-save').onclick = () => App.saveTemplate(null);
     openModal('modal-template');
   },
@@ -845,8 +848,10 @@ const App = {
     document.getElementById('mt-system-prompt').value = t.system_prompt || '';
     document.getElementById('mt-model').value = t.model || 'claude-opus-4-6';
     document.getElementById('mt-max-iterations').value = t.max_iterations || 100;
+    document.getElementById('mt-default-goal').value = t.default_goal || '';
     document.getElementById('mt-secrets-list').innerHTML = '';
     renderToolCheckboxes(t.allowed_tools || []);
+    renderSkillCheckboxes(t.skill_ids || []);
 
     // Show existing secret keys as read-only rows
     for (const key of (t.secret_keys || [])) {
@@ -869,14 +874,16 @@ const App = {
 
     const model = document.getElementById('mt-model').value || 'claude-opus-4-6';
     const max_iterations = parseInt(document.getElementById('mt-max-iterations').value) || 100;
+    const default_goal = document.getElementById('mt-default-goal').value.trim();
+    const skill_ids = getCheckedSkills();
     const allowed_tools = getCheckedTools();
     const secrets = getSecretsFromForm();
 
     try {
       if (id) {
-        await API.put(`/templates/${id}`, { name, description, system_prompt, model, max_iterations, allowed_tools, secrets });
+        await API.put(`/templates/${id}`, { name, description, system_prompt, model, max_iterations, default_goal, skill_ids, allowed_tools, secrets });
       } else {
-        await API.post('/templates', { name, description, system_prompt, model, max_iterations, allowed_tools, secrets });
+        await API.post('/templates', { name, description, system_prompt, model, max_iterations, default_goal, skill_ids, allowed_tools, secrets });
       }
       App.closeModal();
       await loadTemplates();
@@ -905,6 +912,9 @@ const App = {
     const t = state.templates.find(x => x.id === templateId);
     document.getElementById('modal-run-title').textContent = `Run: ${t ? t.name : 'Agent'}`;
     document.getElementById('mr-goal').value = '';
+    document.getElementById('mr-goal').placeholder = t && t.default_goal
+      ? `Default: "${t.default_goal}"`
+      : 'Leave empty to use the agent\'s default goal...';
     document.getElementById('mr-btn-start').onclick = () => App.startRun(templateId);
     openModal('modal-run');
   },
@@ -919,7 +929,6 @@ const App = {
 
   async startRun(templateId) {
     const goal = document.getElementById('mr-goal').value.trim();
-    if (!goal) { alert('Please describe what the agent should do.'); return; }
 
     try {
       const { run_id } = await API.post('/runs', { template_id: templateId || undefined, user_goal: goal });
@@ -1028,6 +1037,15 @@ const App = {
     } catch (e) { alert('Error: ' + e.message); }
   },
 
+  // Skills view
+  showSkills() {
+    state.activeTemplateId = null;
+    state.activeRunId = null;
+    hideAll();
+    document.getElementById('skills-view').classList.remove('hidden');
+    Skills.render();
+  },
+
   closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
@@ -1129,12 +1147,118 @@ function hideAll() {
   document.getElementById('run-view').classList.add('hidden');
   document.getElementById('chat-view').classList.add('hidden');
   document.getElementById('dashboard-view').classList.add('hidden');
+  document.getElementById('skills-view').classList.add('hidden');
   state.chatOpen = false;
 }
 
 function showWelcome() {
   hideAll();
   document.getElementById('welcome-screen').classList.remove('hidden');
+}
+
+// ---------------------------------------------------------------------------
+// Skills
+// ---------------------------------------------------------------------------
+
+const Skills = {
+  render() {
+    const grid = document.getElementById('skills-grid');
+    if (!state.skills.length) {
+      grid.innerHTML = '<div class="skill-card-empty">No skills yet. Create one to get started.</div>';
+      return;
+    }
+    grid.innerHTML = state.skills.map(s => `
+      <div class="skill-card" onclick="Skills.openModal('${s.id}')">
+        <div class="skill-card-name">${esc(s.name)}</div>
+        ${s.description ? `<div class="skill-card-desc">${esc(s.description)}</div>` : ''}
+        <div class="skill-card-tools">
+          ${(s.required_tools || []).map(t => `<span class="tag tag-tool">${esc(t)}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  },
+
+  openModal(id) {
+    const s = id ? state.skills.find(x => x.id === id) : null;
+    document.getElementById('modal-skill-title').textContent = s ? 'Edit Skill' : 'New Skill';
+    document.getElementById('sk-name').value = s ? s.name : '';
+    document.getElementById('sk-description').value = s ? (s.description || '') : '';
+    document.getElementById('sk-prompt').value = s ? s.prompt_snippet : '';
+    document.getElementById('sk-tools').value = s ? (s.required_tools || []).join(', ') : '';
+    const delBtn = document.getElementById('sk-btn-delete');
+    if (s) {
+      delBtn.classList.remove('hidden');
+      delBtn.onclick = () => Skills.delete(id);
+    } else {
+      delBtn.classList.add('hidden');
+    }
+    document.getElementById('sk-btn-save').onclick = () => Skills.save(id || null);
+    openModal('modal-skill');
+  },
+
+  async save(id) {
+    const name = document.getElementById('sk-name').value.trim();
+    const prompt_snippet = document.getElementById('sk-prompt').value.trim();
+    if (!name || !prompt_snippet) { alert('Name and Prompt Snippet are required.'); return; }
+    const description = document.getElementById('sk-description').value.trim();
+    const required_tools = document.getElementById('sk-tools').value
+      .split(',').map(t => t.trim()).filter(Boolean);
+    try {
+      if (id) {
+        await API.put(`/skills/${id}`, { name, description, prompt_snippet, required_tools });
+      } else {
+        await API.post('/skills', { name, description, prompt_snippet, required_tools });
+      }
+      App.closeModal();
+      await loadSkills();
+      Skills.render();
+    } catch (e) { alert('Error: ' + e.message); }
+  },
+
+  async delete(id) {
+    if (!confirm('Delete this skill? Agents using it will no longer inject its instructions.')) return;
+    try {
+      await API.delete(`/skills/${id}`);
+      App.closeModal();
+      await loadSkills();
+      Skills.render();
+    } catch (e) { alert('Error: ' + e.message); }
+  },
+};
+
+function renderSkillCheckboxes(selectedIds) {
+  const container = document.getElementById('mt-skills');
+  if (!state.skills.length) {
+    container.innerHTML = '<div class="empty-hint">No skills yet. Create some in the Skills view.</div>';
+    return;
+  }
+  container.innerHTML = state.skills.map(s => {
+    const checked = selectedIds && selectedIds.includes(s.id);
+    return `
+      <label class="skill-checkbox-label">
+        <input type="checkbox" value="${esc(s.id)}" ${checked ? 'checked' : ''} />
+        <div class="skill-checkbox-row">
+          <div class="skill-checkbox-check">${checked ? '✓' : ''}</div>
+          <span class="skill-checkbox-name">${esc(s.name)}</span>
+        </div>
+        ${s.description ? `<div class="skill-checkbox-desc">${esc(s.description)}</div>` : ''}
+      </label>
+    `;
+  }).join('');
+
+  // Update checkmark on toggle
+  container.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const mark = cb.closest('label').querySelector('.skill-checkbox-check');
+      mark.textContent = cb.checked ? '✓' : '';
+    });
+  });
+}
+
+function getCheckedSkills() {
+  return Array.from(
+    document.querySelectorAll('#mt-skills input[type=checkbox]:checked')
+  ).map(cb => cb.value);
 }
 
 // ---------------------------------------------------------------------------
@@ -1159,12 +1283,18 @@ async function loadTools() {
   } catch { state.tools = []; }
 }
 
+async function loadSkills() {
+  try {
+    state.skills = await API.get('/skills');
+  } catch { state.skills = []; }
+}
+
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
 async function init() {
-  await Promise.all([loadTemplates(), loadRuns(), loadTools()]);
+  await Promise.all([loadTemplates(), loadRuns(), loadTools(), loadSkills()]);
   renderTemplatesList();
   renderRunsList();
 
@@ -1174,12 +1304,14 @@ async function init() {
 
   // Mobile sidebar nav buttons (mirror desktop topbar buttons)
   document.getElementById('btn-dashboard-mob').onclick = () => { closeSidebar(); Dashboard.show(); };
+  document.getElementById('btn-skills-mob').onclick = () => { closeSidebar(); App.showSkills(); };
   document.getElementById('btn-adhoc-mob').onclick = () => { closeSidebar(); App.adhocRunModal(); };
   document.getElementById('btn-import-mob').onclick = () => { closeSidebar(); App.importTemplateModal(); };
 
   // Top bar buttons
   document.getElementById('btn-chat').onclick = () => { closeSidebar(); Chat.show(); };
   document.getElementById('btn-dashboard').onclick = () => Dashboard.show();
+  document.getElementById('btn-skills').onclick = () => App.showSkills();
   document.getElementById('btn-import-agent').onclick = () => App.importTemplateModal();
   document.getElementById('btn-new-template').onclick = () => { closeSidebar(); App.newTemplateModal(); };
   document.getElementById('btn-adhoc-run').onclick = () => App.adhocRunModal();
@@ -1191,6 +1323,9 @@ async function init() {
 
   // Dashboard refresh
   document.getElementById('dashboard-refresh-btn').onclick = () => Dashboard.load();
+
+  // Skills
+  document.getElementById('btn-new-skill').onclick = () => Skills.openModal(null);
 
   // Sidebar search filters
   document.getElementById('agent-search').addEventListener('input', renderTemplatesList);

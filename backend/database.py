@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS widgets (
     UNIQUE(template_id, widget_key)
 );
 
+CREATE TABLE IF NOT EXISTS skills (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    prompt_snippet TEXT NOT NULL,
+    required_tools TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS schedules (
     id TEXT PRIMARY KEY,
     template_id TEXT NOT NULL,
@@ -81,6 +91,8 @@ _MIGRATIONS = [
     "ALTER TABLE runs ADD COLUMN token_usage TEXT",
     "ALTER TABLE runs ADD COLUMN model TEXT NOT NULL DEFAULT 'gpt-4o'",
     "ALTER TABLE templates ADD COLUMN max_iterations INTEGER NOT NULL DEFAULT 100",
+    "ALTER TABLE templates ADD COLUMN skill_ids TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE templates ADD COLUMN default_goal TEXT NOT NULL DEFAULT ''",
 ]
 
 
@@ -133,14 +145,17 @@ async def create_template(
     model: str = "claude-opus-4-6",
     pinned: bool = False,
     max_iterations: int = 100,
+    skill_ids: list[str] = None,
+    default_goal: str = "",
 ) -> str:
     tid = new_id()
     now = utcnow()
     async with aiosqlite.connect(DB_PATH, timeout=10) as db:
         await db.execute(
-            "INSERT INTO templates (id, name, description, system_prompt, allowed_tools, model, pinned, max_iterations, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (tid, name, description, system_prompt, json.dumps(allowed_tools), model, 1 if pinned else 0, max_iterations, now, now),
+            "INSERT INTO templates (id, name, description, system_prompt, allowed_tools, model, pinned, max_iterations, skill_ids, default_goal, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (tid, name, description, system_prompt, json.dumps(allowed_tools), model,
+             1 if pinned else 0, max_iterations, json.dumps(skill_ids or []), default_goal, now, now),
         )
         await db.commit()
     return tid
@@ -154,12 +169,16 @@ async def update_template(
     allowed_tools: list[str],
     model: str = "claude-opus-4-6",
     max_iterations: int = 100,
+    skill_ids: list[str] = None,
+    default_goal: str = "",
 ):
     now = utcnow()
     async with aiosqlite.connect(DB_PATH, timeout=10) as db:
         await db.execute(
-            "UPDATE templates SET name=?, description=?, system_prompt=?, allowed_tools=?, model=?, max_iterations=?, updated_at=? WHERE id=?",
-            (name, description, system_prompt, json.dumps(allowed_tools), model, max_iterations, now, template_id),
+            "UPDATE templates SET name=?, description=?, system_prompt=?, allowed_tools=?, model=?, "
+            "max_iterations=?, skill_ids=?, default_goal=?, updated_at=? WHERE id=?",
+            (name, description, system_prompt, json.dumps(allowed_tools), model,
+             max_iterations, json.dumps(skill_ids or []), default_goal, now, template_id),
         )
         await db.commit()
 
@@ -522,6 +541,71 @@ async def get_due_schedules() -> list[dict]:
         ) as cur:
             rows = await cur.fetchall()
         return [dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Skills
+# ---------------------------------------------------------------------------
+
+async def list_skills() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM skills ORDER BY name") as cur:
+            return [dict(r) for r in await cur.fetchall()]
+
+
+async def get_skill(skill_id: str) -> dict | None:
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM skills WHERE id=?", (skill_id,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+
+async def get_skills_by_ids(skill_ids: list[str]) -> list[dict]:
+    if not skill_ids:
+        return []
+    placeholders = ",".join("?" * len(skill_ids))
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            f"SELECT * FROM skills WHERE id IN ({placeholders})", skill_ids
+        ) as cur:
+            rows = {r["id"]: dict(r) for r in await cur.fetchall()}
+    return [rows[sid] for sid in skill_ids if sid in rows]
+
+
+async def create_skill(
+    name: str, description: str, prompt_snippet: str, required_tools: list[str]
+) -> str:
+    sid = new_id()
+    now = utcnow()
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        await db.execute(
+            "INSERT INTO skills (id, name, description, prompt_snippet, required_tools, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (sid, name, description, prompt_snippet, json.dumps(required_tools), now, now),
+        )
+        await db.commit()
+    return sid
+
+
+async def update_skill(
+    skill_id: str, name: str, description: str, prompt_snippet: str, required_tools: list[str]
+):
+    now = utcnow()
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        await db.execute(
+            "UPDATE skills SET name=?, description=?, prompt_snippet=?, required_tools=?, updated_at=? WHERE id=?",
+            (name, description, prompt_snippet, json.dumps(required_tools), now, skill_id),
+        )
+        await db.commit()
+
+
+async def delete_skill(skill_id: str):
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        await db.execute("DELETE FROM skills WHERE id=?", (skill_id,))
+        await db.commit()
 
 
 async def mark_schedule_ran(schedule_id: str, interval_minutes: int):

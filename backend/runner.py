@@ -14,6 +14,7 @@ from .database import (
     upsert_widget,
     list_templates,
     create_run,
+    get_skills_by_ids,
 )
 from .tools import execute_tool, get_tool_schemas
 
@@ -105,9 +106,19 @@ async def run_agent(
         await broadcast(event)
         await append_run_event(run_id, event)
 
-    user_goal = template.get("_user_goal", "")
+    user_goal = template.get("_user_goal", "") or template.get("default_goal", "") or "Complete your configured task as described in the system prompt."
     allowed_tools: list[str] = json.loads(template.get("allowed_tools", "[]"))
     system_prompt: str = template.get("system_prompt", "You are a helpful assistant.")
+
+    # Inject skill snippets into system prompt
+    skill_ids = json.loads(template.get("skill_ids", "[]"))
+    if skill_ids:
+        skills = await get_skills_by_ids(skill_ids)
+        if skills:
+            skills_block = "\n\n".join(
+                f"### Skill: {s['name']}\n{s['prompt_snippet']}" for s in skills
+            )
+            system_prompt += f"\n\n---\n## Available Skills\n\n{skills_block}"
 
     # Inject pre-stored secrets into the system prompt so GPT can use them silently
     if secrets:

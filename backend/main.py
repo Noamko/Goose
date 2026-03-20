@@ -14,25 +14,30 @@ from .database import (
     append_run_event,
     create_run,
     create_schedule,
+    create_skill,
     create_template,
     delete_schedule,
     delete_secret_entry,
+    delete_skill,
     delete_template,
     delete_widget,
     get_due_schedules,
     get_run,
     get_secret_keys,
+    get_skill,
     get_template,
     get_usage_stats,
     init_db,
     list_runs,
     list_schedules,
+    list_skills,
     list_templates,
     list_widgets,
     mark_schedule_ran,
     set_template_pinned,
     toggle_schedule,
     update_run_tokens,
+    update_skill,
     update_template,
     upsert_widget,
 )
@@ -239,6 +244,7 @@ async def api_list_templates():
     for t in templates:
         t["secret_keys"] = await get_secret_keys(t["id"])
         t["allowed_tools"] = json.loads(t["allowed_tools"])
+        t["skill_ids"] = json.loads(t.get("skill_ids") or "[]")
     return templates
 
 
@@ -251,6 +257,8 @@ async def api_create_template(data: dict):
         allowed_tools=data.get("allowed_tools", []),
         model=data.get("model", "claude-opus-4-6"),
         max_iterations=int(data.get("max_iterations", 100)),
+        skill_ids=data.get("skill_ids", []),
+        default_goal=data.get("default_goal", ""),
     )
     for key, value in (data.get("secrets") or {}).items():
         if key and value:
@@ -271,6 +279,8 @@ async def api_update_template(template_id: str, data: dict):
         allowed_tools=data.get("allowed_tools", json.loads(template["allowed_tools"])),
         model=data.get("model", template.get("model", "claude-opus-4-6")),
         max_iterations=int(data.get("max_iterations", template.get("max_iterations", 100))),
+        skill_ids=data.get("skill_ids", json.loads(template.get("skill_ids", "[]"))),
+        default_goal=data.get("default_goal", template.get("default_goal", "")),
     )
     for key, value in (data.get("secrets") or {}).items():
         if key and value:
@@ -491,6 +501,50 @@ async def api_delete_widget(widget_id: str):
 @app.get("/api/usage")
 async def api_usage():
     return await get_usage_stats()
+
+
+# ---------------------------------------------------------------------------
+# REST — Skills
+# ---------------------------------------------------------------------------
+
+@app.get("/api/skills")
+async def api_list_skills():
+    skills = await list_skills()
+    for s in skills:
+        s["required_tools"] = json.loads(s.get("required_tools") or "[]")
+    return skills
+
+
+@app.post("/api/skills", status_code=201)
+async def api_create_skill(data: dict):
+    sid = await create_skill(
+        name=data["name"],
+        description=data.get("description", ""),
+        prompt_snippet=data["prompt_snippet"],
+        required_tools=data.get("required_tools", []),
+    )
+    return {"id": sid}
+
+
+@app.put("/api/skills/{skill_id}")
+async def api_update_skill(skill_id: str, data: dict):
+    skill = await get_skill(skill_id)
+    if not skill:
+        raise HTTPException(404, "Skill not found")
+    await update_skill(
+        skill_id,
+        name=data.get("name", skill["name"]),
+        description=data.get("description", skill.get("description", "")),
+        prompt_snippet=data.get("prompt_snippet", skill["prompt_snippet"]),
+        required_tools=data.get("required_tools", json.loads(skill.get("required_tools", "[]"))),
+    )
+    return {"id": skill_id}
+
+
+@app.delete("/api/skills/{skill_id}")
+async def api_delete_skill(skill_id: str):
+    await delete_skill(skill_id)
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------

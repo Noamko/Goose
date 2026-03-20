@@ -1132,6 +1132,118 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ================================================================
+   SKILLS VIEW
+   ================================================================ */
+
+.skills-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.skill-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.skill-card:hover { border-color: var(--accent); }
+
+.skill-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.skill-card-desc {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.skill-card-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.skill-card-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text3);
+  font-size: 14px;
+}
+
+/* Skills checkboxes in agent modal */
+.skills-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.skill-checkbox-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.skill-checkbox-label:has(input:checked) {
+  background: rgba(124, 106, 255, 0.08);
+  border-color: var(--accent-dim);
+}
+
+.skill-checkbox-label input { display: none; }
+
+.skill-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skill-checkbox-check {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border2);
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.skill-checkbox-label:has(input:checked) .skill-checkbox-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.skill-checkbox-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.skill-checkbox-desc { font-size: 11px; color: var(--text3); padding-left: 22px; }
+
+/* ================================================================
    USAGE & COSTS
    ================================================================ */
 
@@ -1275,7 +1387,7 @@ body {
 @media (max-width: 768px) {
   /* Show hamburger, hide desktop secondary buttons */
   .btn-menu { display: inline-flex; }
-  #btn-dashboard, #btn-import-agent, #btn-adhoc-run { display: none; }
+  #btn-dashboard, #btn-skills, #btn-import-agent, #btn-adhoc-run { display: none; }
 
   /* Topbar: tighter padding */
   .topbar { padding: 0 12px; }
