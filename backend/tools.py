@@ -226,6 +226,30 @@ TOOLS: dict[str, dict] = {
         },
         "executor": None,  # handled specially in runner
     },
+    "patch_file": {
+        "schema": {
+            "type": "function",
+            "function": {
+                "name": "patch_file",
+                "description": (
+                    "Edit a file by replacing an exact string with a new string. "
+                    "Use this instead of read+write when you only need to change a specific part of a file. "
+                    "The old_string must match exactly (including whitespace and indentation). "
+                    "Fails if old_string is not found or is ambiguous (appears more than once)."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Absolute or ~ path to the file."},
+                        "old_string": {"type": "string", "description": "Exact string to find and replace."},
+                        "new_string": {"type": "string", "description": "String to replace it with."},
+                    },
+                    "required": ["path", "old_string", "new_string"],
+                },
+            },
+        },
+        "executor": "_exec_patch_file",
+    },
     "run_shell_command": {
         "schema": {
             "type": "function",
@@ -399,6 +423,24 @@ async def _exec_list_directory(arguments: dict, secrets: dict) -> str:
         return "\n".join(lines) if lines else "(empty directory)"
     except Exception as e:
         return f"Error listing directory: {e}"
+
+
+async def _exec_patch_file(arguments: dict, secrets: dict) -> str:
+    from pathlib import Path
+    try:
+        path = Path(arguments["path"]).expanduser()
+        old = arguments["old_string"]
+        new = arguments["new_string"]
+        content = path.read_text(encoding="utf-8")
+        count = content.count(old)
+        if count == 0:
+            return f"Error: old_string not found in {path}"
+        if count > 1:
+            return f"Error: old_string found {count} times in {path} — make it more specific"
+        path.write_text(content.replace(old, new, 1), encoding="utf-8")
+        return f"Patched {path}"
+    except Exception as e:
+        return f"Error patching file: {e}"
 
 
 async def _exec_run_shell_command(arguments: dict, secrets: dict) -> str:
