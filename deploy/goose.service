@@ -1,0 +1,22 @@
+[Unit]
+Description=Goose AI Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=goose
+Group=goose
+WorkingDirectory=APP_DIR_PLACEHOLDER
+EnvironmentFile=APP_DIR_PLACEHOLDER/.env
+ExecStart=APP_DIR_PLACEHOLDER/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=APP_DIR_PLACEHOLDER
+
+[Install]
+WantedBy=multi-user.target

@@ -19,6 +19,7 @@ env/
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -29,6 +30,9 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Vault encryption key
+.vault.key
 
 # Pip version files
 =*
