@@ -37,6 +37,7 @@ id -u "$APP_USER" &>/dev/null || useradd -r -m -d "$APP_DIR" -s /bin/bash "$APP_
 echo "==> Cloning / updating repo"
 if [ -d "$APP_DIR/.git" ]; then
   sudo -u "$APP_USER" git -C "$APP_DIR" pull
+  chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 else
   # If the dir exists but is not a git repo, clone into it
   if [ -d "$APP_DIR" ] && [ "$(ls -A $APP_DIR)" ]; then
