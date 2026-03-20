@@ -328,7 +328,7 @@ async def run_chat(messages: list[dict]) -> dict:
     chat_tools = _build_tools(tool_names, tool_lines)
 
     action = None
-    chat_model = os.environ.get("CHAT_MODEL", "gpt-4o")
+    chat_model = os.environ.get("CHAT_MODEL", "claude-opus-4-6")
 
     # Agentic loop — keep going until the model stops calling tools
     for _ in range(15):

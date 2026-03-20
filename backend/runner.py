@@ -136,7 +136,7 @@ async def run_agent(
         ]
         log_label = f"Starting: {user_goal}"
 
-    model = template.get("model", "gpt-4o")
+    model = template.get("model", "claude-opus-4-6")
     template_id = template.get("id")
     tool_schemas = get_tool_schemas(allowed_tools)
     max_iterations = 30
@@ -317,7 +317,7 @@ async def run_agent(
                             result = f"No agent named '{agent_name}' found."
                             status = "error"
                         else:
-                            child_run_id = await create_run(target["id"], target["name"], goal, target.get("model", "gpt-4o"))
+                            child_run_id = await create_run(target["id"], target["name"], goal, target.get("model", "claude-opus-4-6"))
                             child_template = dict(target)
                             child_template["_user_goal"] = goal
 

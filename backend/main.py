@@ -71,7 +71,7 @@ async def _run_due_schedules():
         template = await get_template(sched["template_id"])
         if not template:
             continue
-        run_id = await create_run(sched["template_id"], template["name"], sched["goal"], template.get("model", "gpt-4o"))
+        run_id = await create_run(sched["template_id"], template["name"], sched["goal"], template.get("model", "claude-opus-4-6"))
         await mark_schedule_ran(sched["id"])
         secrets = await vault.get_secrets(sched["template_id"])
         tmpl = dict(template)
@@ -110,7 +110,7 @@ async def _tg_start_run(template_id: str, template_name: str, goal: str) -> str:
     template = await get_template(template_id)
     if not template:
         raise ValueError(f"Template {template_id} not found")
-    run_id = await create_run(template_id, template_name, goal, template.get("model", "gpt-4o"))
+    run_id = await create_run(template_id, template_name, goal, template.get("model", "claude-opus-4-6"))
     secrets = await vault.get_secrets(template_id)
     tmpl = dict(template)
     tmpl["_user_goal"] = goal
@@ -249,7 +249,7 @@ async def api_create_template(data: dict):
         description=data.get("description", ""),
         system_prompt=data["system_prompt"],
         allowed_tools=data.get("allowed_tools", []),
-        model=data.get("model", "gpt-4o"),
+        model=data.get("model", "claude-opus-4-6"),
     )
     for key, value in (data.get("secrets") or {}).items():
         if key and value:
@@ -268,7 +268,7 @@ async def api_update_template(template_id: str, data: dict):
         description=data.get("description", template.get("description", "")),
         system_prompt=data.get("system_prompt", template["system_prompt"]),
         allowed_tools=data.get("allowed_tools", json.loads(template["allowed_tools"])),
-        model=data.get("model", template.get("model", "gpt-4o")),
+        model=data.get("model", template.get("model", "claude-opus-4-6")),
     )
     for key, value in (data.get("secrets") or {}).items():
         if key and value:
@@ -359,11 +359,11 @@ async def api_start_run(data: dict):
             "id": None, "name": "Ad-hoc",
             "system_prompt": data.get("system_prompt", "You are a helpful assistant."),
             "allowed_tools": json.dumps(list(TOOLS.keys())),
-            "model": data.get("model", "gpt-4o"),
+            "model": data.get("model", "claude-opus-4-6"),
         }
         template_name = "Ad-hoc"
 
-    run_id = await create_run(template_id, template_name, goal, template.get("model", "gpt-4o"))
+    run_id = await create_run(template_id, template_name, goal, template.get("model", "claude-opus-4-6"))
     secrets = await vault.get_secrets(template_id) if template_id else {}
     tmpl = dict(template)
     tmpl["_user_goal"] = goal
@@ -409,7 +409,7 @@ async def api_continue_run(run_id: str, data: dict):
             prior_messages.append({"role": ev["role"], "content": ev["content"]})
     prior_messages.append({"role": "user", "content": user_message})
 
-    new_run_id = await create_run(template_id, template["name"], user_message, template.get("model", "gpt-4o"))
+    new_run_id = await create_run(template_id, template["name"], user_message, template.get("model", "claude-opus-4-6"))
     secrets = await vault.get_secrets(template_id)
     tmpl = dict(template)
     tmpl["_user_goal"] = user_message

@@ -136,7 +136,7 @@ function renderTemplateDetail(t) {
   document.getElementById('td-name').textContent = t.name;
   document.getElementById('td-description').textContent = t.description || '';
   document.getElementById('td-system-prompt').textContent = t.system_prompt;
-  document.getElementById('td-model-badge').textContent = t.model || 'gpt-4o';
+  document.getElementById('td-model-badge').textContent = t.model || 'claude-opus-4-6';
 
   const pinBtn = document.getElementById('td-btn-pin');
   pinBtn.textContent = t.pinned ? '★ Unpin' : '☆ Pin';
@@ -819,7 +819,7 @@ const App = {
     document.getElementById('mt-name').value = '';
     document.getElementById('mt-description').value = '';
     document.getElementById('mt-system-prompt').value = '';
-    document.getElementById('mt-model').value = 'gpt-4o';
+    document.getElementById('mt-model').value = 'claude-opus-4-6';
     document.getElementById('mt-secrets-list').innerHTML = '';
     renderToolCheckboxes(null);
     document.getElementById('mt-btn-save').onclick = () => App.saveTemplate(null);
@@ -842,7 +842,7 @@ const App = {
     document.getElementById('mt-name').value = t.name || '';
     document.getElementById('mt-description').value = t.description || '';
     document.getElementById('mt-system-prompt').value = t.system_prompt || '';
-    document.getElementById('mt-model').value = t.model || 'gpt-4o';
+    document.getElementById('mt-model').value = t.model || 'claude-opus-4-6';
     document.getElementById('mt-secrets-list').innerHTML = '';
     renderToolCheckboxes(t.allowed_tools || []);
 
@@ -865,7 +865,7 @@ const App = {
       return;
     }
 
-    const model = document.getElementById('mt-model').value || 'gpt-4o';
+    const model = document.getElementById('mt-model').value || 'claude-opus-4-6';
     const allowed_tools = getCheckedTools();
     const secrets = getSecretsFromForm();
 
@@ -961,7 +961,7 @@ const App = {
       description: t.description,
       system_prompt: t.system_prompt,
       allowed_tools: t.allowed_tools,
-      model: t.model || 'gpt-4o',
+      model: t.model || 'claude-opus-4-6',
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -992,7 +992,7 @@ const App = {
         description: data.description || '',
         system_prompt: data.system_prompt,
         allowed_tools: data.allowed_tools || [],
-        model: data.model || 'gpt-4o',
+        model: data.model || 'claude-opus-4-6',
       });
       App.closeModal();
       await loadTemplates();

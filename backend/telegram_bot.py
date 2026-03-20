@@ -147,7 +147,7 @@ async def cmd_agents(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     for t in templates:
         pin = "★ " if t.get("pinned") else ""
         desc = t.get("description") or "No description"
-        model = t.get("model") or "gpt-4o"
+        model = t.get("model") or "claude-opus-4-6"
         lines.append(f"• {pin}<b>{h(t['name'])}</b> — {h(desc)} <i>[{h(model)}]</i>")
     lines.append("\nUse /run to start one.")
     await update.message.reply_text("\n".join(lines), parse_mode="HTML")

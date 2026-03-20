@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS templates (
     description TEXT DEFAULT '',
     system_prompt TEXT NOT NULL,
     allowed_tools TEXT NOT NULL DEFAULT '[]',
-    model TEXT NOT NULL DEFAULT 'gpt-4o',
+    model TEXT NOT NULL DEFAULT 'claude-opus-4-6',
     pinned INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -129,7 +129,7 @@ async def create_template(
     description: str,
     system_prompt: str,
     allowed_tools: list[str],
-    model: str = "gpt-4o",
+    model: str = "claude-opus-4-6",
     pinned: bool = False,
 ) -> str:
     tid = new_id()
@@ -150,7 +150,7 @@ async def update_template(
     description: str,
     system_prompt: str,
     allowed_tools: list[str],
-    model: str = "gpt-4o",
+    model: str = "claude-opus-4-6",
 ):
     now = utcnow()
     async with aiosqlite.connect(DB_PATH, timeout=10) as db:
@@ -204,7 +204,7 @@ async def create_run(
     template_id: str | None,
     template_name: str | None,
     user_goal: str,
-    model: str = "gpt-4o",
+    model: str = "claude-opus-4-6",
 ) -> str:
     rid = new_id()
     now = utcnow()
@@ -261,7 +261,7 @@ async def get_usage_stats() -> dict:
         except Exception:
             continue
 
-        model = row["model"] or "gpt-4o"
+        model = row["model"] or "claude-opus-4-6"
         c = cost_for(model, prompt, completion)
         started = row["started_at"] or ""
 
