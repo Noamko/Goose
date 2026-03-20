@@ -80,6 +80,7 @@ _MIGRATIONS = [
     "ALTER TABLE templates ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE runs ADD COLUMN token_usage TEXT",
     "ALTER TABLE runs ADD COLUMN model TEXT NOT NULL DEFAULT 'gpt-4o'",
+    "ALTER TABLE templates ADD COLUMN max_iterations INTEGER NOT NULL DEFAULT 100",
 ]
 
 
@@ -131,14 +132,15 @@ async def create_template(
     allowed_tools: list[str],
     model: str = "claude-opus-4-6",
     pinned: bool = False,
+    max_iterations: int = 100,
 ) -> str:
     tid = new_id()
     now = utcnow()
     async with aiosqlite.connect(DB_PATH, timeout=10) as db:
         await db.execute(
-            "INSERT INTO templates (id, name, description, system_prompt, allowed_tools, model, pinned, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (tid, name, description, system_prompt, json.dumps(allowed_tools), model, 1 if pinned else 0, now, now),
+            "INSERT INTO templates (id, name, description, system_prompt, allowed_tools, model, pinned, max_iterations, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (tid, name, description, system_prompt, json.dumps(allowed_tools), model, 1 if pinned else 0, max_iterations, now, now),
         )
         await db.commit()
     return tid
@@ -151,12 +153,13 @@ async def update_template(
     system_prompt: str,
     allowed_tools: list[str],
     model: str = "claude-opus-4-6",
+    max_iterations: int = 100,
 ):
     now = utcnow()
     async with aiosqlite.connect(DB_PATH, timeout=10) as db:
         await db.execute(
-            "UPDATE templates SET name=?, description=?, system_prompt=?, allowed_tools=?, model=?, updated_at=? WHERE id=?",
-            (name, description, system_prompt, json.dumps(allowed_tools), model, now, template_id),
+            "UPDATE templates SET name=?, description=?, system_prompt=?, allowed_tools=?, model=?, max_iterations=?, updated_at=? WHERE id=?",
+            (name, description, system_prompt, json.dumps(allowed_tools), model, max_iterations, now, template_id),
         )
         await db.commit()
 

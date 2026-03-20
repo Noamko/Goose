@@ -139,7 +139,7 @@ async def run_agent(
     model = template.get("model", "claude-opus-4-6")
     template_id = template.get("id")
     tool_schemas = get_tool_schemas(allowed_tools)
-    max_iterations = 30
+    max_iterations = int(template.get("max_iterations") or 100)
     total_prompt_tokens = 0
     total_completion_tokens = 0
 

@@ -248,6 +248,10 @@
         </select>
       </div>
       <div class="form-group">
+        <label>Max Iterations <span class="text-secondary">(tool call steps per run)</span></label>
+        <input id="mt-max-iterations" class="input-field" type="number" min="1" max="500" value="100" />
+      </div>
+      <div class="form-group">
         <label>Allowed Tools <span class="text-secondary">(ask_user always enabled)</span></label>
         <div id="mt-tools" class="tools-checkboxes"></div>
       </div>

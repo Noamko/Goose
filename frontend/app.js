@@ -820,6 +820,7 @@ const App = {
     document.getElementById('mt-description').value = '';
     document.getElementById('mt-system-prompt').value = '';
     document.getElementById('mt-model').value = 'claude-opus-4-6';
+    document.getElementById('mt-max-iterations').value = '100';
     document.getElementById('mt-secrets-list').innerHTML = '';
     renderToolCheckboxes(null);
     document.getElementById('mt-btn-save').onclick = () => App.saveTemplate(null);
@@ -843,6 +844,7 @@ const App = {
     document.getElementById('mt-description').value = t.description || '';
     document.getElementById('mt-system-prompt').value = t.system_prompt || '';
     document.getElementById('mt-model').value = t.model || 'claude-opus-4-6';
+    document.getElementById('mt-max-iterations').value = t.max_iterations || 100;
     document.getElementById('mt-secrets-list').innerHTML = '';
     renderToolCheckboxes(t.allowed_tools || []);
 
@@ -866,14 +868,15 @@ const App = {
     }
 
     const model = document.getElementById('mt-model').value || 'claude-opus-4-6';
+    const max_iterations = parseInt(document.getElementById('mt-max-iterations').value) || 100;
     const allowed_tools = getCheckedTools();
     const secrets = getSecretsFromForm();
 
     try {
       if (id) {
-        await API.put(`/templates/${id}`, { name, description, system_prompt, model, allowed_tools, secrets });
+        await API.put(`/templates/${id}`, { name, description, system_prompt, model, max_iterations, allowed_tools, secrets });
       } else {
-        await API.post('/templates', { name, description, system_prompt, model, allowed_tools, secrets });
+        await API.post('/templates', { name, description, system_prompt, model, max_iterations, allowed_tools, secrets });
       }
       App.closeModal();
       await loadTemplates();

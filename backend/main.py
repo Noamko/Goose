@@ -250,6 +250,7 @@ async def api_create_template(data: dict):
         system_prompt=data["system_prompt"],
         allowed_tools=data.get("allowed_tools", []),
         model=data.get("model", "claude-opus-4-6"),
+        max_iterations=int(data.get("max_iterations", 100)),
     )
     for key, value in (data.get("secrets") or {}).items():
         if key and value:
@@ -269,6 +270,7 @@ async def api_update_template(template_id: str, data: dict):
         system_prompt=data.get("system_prompt", template["system_prompt"]),
         allowed_tools=data.get("allowed_tools", json.loads(template["allowed_tools"])),
         model=data.get("model", template.get("model", "claude-opus-4-6")),
+        max_iterations=int(data.get("max_iterations", template.get("max_iterations", 100))),
     )
     for key, value in (data.get("secrets") or {}).items():
         if key and value:
