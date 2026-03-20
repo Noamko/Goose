@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goose — AI Assistant Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo">GOOSE</span>
+        <span class="logo-sub">AI Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-chat" id="btn-chat">Chat</button>
+        <button class="btn btn-ghost" id="btn-dashboard">Dashboard</button>
+        <button class="btn btn-ghost btn-sm" id="btn-import-agent" title="Import agent from JSON">Import</button>
+        <button class="btn btn-primary" id="btn-new-template">+ New Agent</button>
+        <button class="btn btn-ghost" id="btn-adhoc-run">Run Ad-hoc</button>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <div class="layout">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <section class="sidebar-section">
+          <div class="section-header">
+            <span>AGENTS</span>
+          </div>
+          <div class="sidebar-search">
+            <input id="agent-search" placeholder="Search agents..." />
+          </div>
+          <div id="templates-list" class="item-list">
+            <div class="empty-hint">No agents yet. Create one →</div>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <div class="section-header">
+            <span>RECENT RUNS</span>
+          </div>
+          <div class="sidebar-search">
+            <input id="run-search" placeholder="Filter runs..." />
+          </div>
+          <div id="runs-list" class="item-list">
+            <div class="empty-hint">No runs yet.</div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Main content area -->
+      <main id="main-content">
+        <div class="welcome-screen" id="welcome-screen">
+          <div class="welcome-icon">⚡</div>
+          <h2>Welcome to Goose</h2>
+          <p>Your personal AI assistant. Create an agent template to get started, or run an ad-hoc task.</p>
+          <div class="welcome-actions">
+            <button class="btn btn-primary btn-lg" id="btn-welcome-new">Create your first agent</button>
+            <button class="btn btn-ghost btn-lg" id="btn-welcome-adhoc">Run something now</button>
+          </div>
+        </div>
+
+        <!-- Template detail view (hidden by default) -->
+        <div class="detail-view hidden" id="template-detail">
+          <div class="detail-header">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+                <h2 id="td-name"></h2>
+                <span id="td-model-badge" class="model-badge"></span>
+              </div>
+              <p id="td-description" class="text-secondary"></p>
+            </div>
+            <div class="detail-actions">
+              <button class="btn btn-primary" id="td-btn-run">▶ Run</button>
+              <button class="btn btn-ghost" id="td-btn-pin" title="Pin to top">☆ Pin</button>
+              <button class="btn btn-ghost" id="td-btn-edit">Edit</button>
+              <button class="btn btn-ghost btn-sm" id="td-btn-export" title="Export as JSON">Export</button>
+              <button class="btn btn-danger" id="td-btn-delete">Delete</button>
+            </div>
+          </div>
+
+          <div class="detail-body">
+            <div class="info-card">
+              <div class="info-card-title">System Prompt</div>
+              <pre id="td-system-prompt" class="code-block"></pre>
+            </div>
+            <div class="info-row">
+              <div class="info-card half">
+                <div class="info-card-title">Allowed Tools</div>
+                <div id="td-tools" class="tag-list"></div>
+              </div>
+              <div class="info-card half">
+                <div class="info-card-title">Stored Credentials</div>
+                <div id="td-secrets" class="tag-list"></div>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Schedules</div>
+              <div id="td-schedules" class="schedules-list" style="margin-bottom:10px"></div>
+              <div class="add-schedule-form">
+                <input id="td-sched-goal" class="input-field" placeholder="Goal for scheduled run..." />
+                <select id="td-sched-interval" class="input-field">
+                  <option value="60">Every hour</option>
+                  <option value="360">Every 6h</option>
+                  <option value="720">Every 12h</option>
+                  <option value="1440" selected>Every day</option>
+                  <option value="10080">Every week</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="td-sched-add-btn">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard view (hidden by default) -->
+        <div class="dashboard-view hidden" id="dashboard-view">
+          <div class="dashboard-header">
+            <h2>Dashboard</h2>
+            <button class="btn btn-ghost btn-sm" id="dashboard-refresh-btn">Refresh</button>
+          </div>
+          <div id="widget-grid" class="widget-grid"></div>
+        </div>
+
+        <!-- Chat view (hidden by default) -->
+        <div class="chat-view hidden" id="chat-view">
+          <div class="chat-header">
+            <div>
+              <span class="chat-title">Goose</span>
+              <span class="chat-subtitle">Ask anything, or say "create an agent that..."</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="chat-clear-btn">Clear</button>
+          </div>
+          <div class="chat-welcome">
+            Hey! I'm Goose. I can create new AI agents for you, manage existing ones, or just answer questions. What do you need?
+          </div>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input-area">
+            <textarea id="chat-input" class="input-field chat-textarea" rows="2"
+              placeholder="Ask anything or describe an agent you want to create..."></textarea>
+            <button class="btn btn-primary" id="chat-send-btn">Send</button>
+          </div>
+        </div>
+
+        <!-- Run view (hidden by default) -->
+        <div class="run-view hidden" id="run-view">
+          <div class="run-header">
+            <div>
+              <div class="run-title-row">
+                <span id="rv-template-name" class="run-agent-name"></span>
+                <span id="rv-status" class="status-badge"></span>
+                <span id="rv-tokens" class="token-badge hidden"></span>
+              </div>
+              <p id="rv-goal" class="run-goal"></p>
+            </div>
+            <div class="run-actions">
+              <button class="btn btn-danger hidden" id="rv-btn-cancel">Cancel</button>
+            </div>
+          </div>
+
+          <div id="rv-log" class="run-log"></div>
+
+          <!-- Follow-up widget (shown after run completes/fails) -->
+          <div id="rv-followup-widget" class="followup-widget hidden">
+            <div class="followup-widget-form">
+              <input id="rv-followup-input" class="input-field" placeholder="Follow up or ask something else..." />
+              <button class="btn btn-ghost" id="rv-followup-btn">Send</button>
+            </div>
+          </div>
+
+          <!-- Input widget (shown when agent asks a question) -->
+          <div id="rv-input-widget" class="input-widget hidden">
+            <div class="input-widget-question" id="rv-question"></div>
+            <div class="input-widget-form">
+              <input id="rv-input-field" class="input-field" placeholder="Your answer..." />
+              <div class="input-widget-opts">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rv-save-check" />
+                  <span>Save as credential</span>
+                </label>
+                <input id="rv-save-key" class="input-field input-sm" placeholder="credential name" style="display:none"/>
+              </div>
+              <button class="btn btn-primary" id="rv-btn-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="App.closeModal()"></div>
+
+  <!-- Template create/edit modal -->
+  <div id="modal-template" class="modal hidden">
+    <div class="modal-header">
+      <h3 id="modal-template-title">New Agent</h3>
+      <button class="modal-close" onclick="App.closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Name *</label>
+        <input id="mt-name" class="input-field" placeholder="e.g. Email Reader" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input id="mt-description" class="input-field" placeholder="What does this agent do?" />
+      </div>
+      <div class="form-group">
+        <label>System Prompt *</label>
+        <textarea id="mt-system-prompt" class="input-field textarea" rows="6"
+          placeholder="You are a helpful assistant. Your job is to..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Model</label>
+        <select id="mt-model" class="input-field">
+          <option value="gpt-4o">gpt-4o (default)</option>
+          <option value="gpt-4o-mini">gpt-4o-mini (faster / cheaper)</option>
+          <option value="gpt-4-turbo">gpt-4-turbo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Allowed Tools <span class="text-secondary">(ask_user always enabled)</span></label>
+        <div id="mt-tools" class="tools-checkboxes"></div>
+      </div>
+      <div class="form-group">
+        <label>Initial Credentials</label>
+        <div id="mt-secrets-list" class="secrets-list"></div>
+        <button class="btn btn-ghost btn-sm" id="mt-btn-add-secret">+ Add credential</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="mt-btn-save">Save Agent</button>
+    </div>
+  </div>
+
+  <!-- Run start modal -->
+  <div id="modal-run" class="modal hidden">
+    <div class="modal-header">
+      <h3 id="modal-run-title">Start Run</h3>
+      <button class="modal-close" onclick="App.closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>What should the agent do?</label>
+        <textarea id="mr-goal" class="input-field textarea" rows="4"
+          placeholder="Describe the task..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="mr-btn-start">▶ Start Agent</button>
+    </div>
+  </div>
+
+  <!-- Import agent modal -->
+  <div id="modal-import" class="modal hidden">
+    <div class="modal-header">
+      <h3>Import Agent</h3>
+      <button class="modal-close" onclick="App.closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Paste exported agent JSON</label>
+        <textarea id="import-json" class="input-field textarea" rows="10"
+          placeholder='{"name":"...","system_prompt":"...","allowed_tools":[...],"model":"gpt-4o"}'></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="import-btn-save">Import</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
