@@ -12,6 +12,7 @@
     <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-left">
+        <button class="btn btn-ghost btn-sm btn-menu" id="btn-sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
         <span class="logo">GOOSE</span>
         <span class="logo-sub">AI Dashboard</span>
       </div>
@@ -26,9 +27,15 @@
 
     <!-- Main layout -->
     <div class="layout">
+      <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
       <!-- Sidebar -->
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-mobile-nav">
+          <button class="btn btn-ghost btn-sm" id="btn-dashboard-mob">Dashboard</button>
+          <button class="btn btn-ghost btn-sm" id="btn-adhoc-mob">Run Ad-hoc</button>
+          <button class="btn btn-ghost btn-sm" id="btn-import-mob">Import Agent</button>
+        </div>
         <section class="sidebar-section">
           <div class="section-header">
             <span>AGENTS</span>

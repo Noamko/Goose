@@ -90,7 +90,7 @@ function renderTemplatesList() {
   }
   el.innerHTML = filtered.map(t => `
     <div class="sidebar-item ${state.activeTemplateId === t.id ? 'active' : ''}"
-         onclick="App.showTemplate('${t.id}')">
+         onclick="closeSidebar(); App.showTemplate('${t.id}')">
       <div class="sidebar-item-name">${t.pinned ? '★ ' : ''}${esc(t.name)}</div>
       <div class="sidebar-item-meta">${esc(t.description || 'No description')}</div>
       <div class="sidebar-item-actions" onclick="event.stopPropagation()">
@@ -118,7 +118,7 @@ function renderRunsList() {
   }
   el.innerHTML = filtered.slice(0, 30).map(r => `
     <div class="sidebar-item ${state.activeRunId === r.id ? 'active' : ''}"
-         onclick="App.showRun('${r.id}')">
+         onclick="closeSidebar(); App.showRun('${r.id}')">
       <div class="sidebar-item-name">${esc(r.template_name || 'Ad-hoc')}</div>
       <div class="sidebar-item-meta">
         <span class="status-badge ${statusClass(r.status)}">${statusLabel(r.status)}</span>
@@ -1013,6 +1013,26 @@ function getSecretsFromForm() {
 }
 
 // ---------------------------------------------------------------------------
+// Mobile sidebar toggle
+// ---------------------------------------------------------------------------
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-backdrop').classList.add('open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar.classList.contains('open')) closeSidebar();
+  else openSidebar();
+}
+
+// ---------------------------------------------------------------------------
 // Modal helpers
 // ---------------------------------------------------------------------------
 
@@ -1066,11 +1086,20 @@ async function init() {
   renderTemplatesList();
   renderRunsList();
 
+  // Sidebar toggle (mobile)
+  document.getElementById('btn-sidebar-toggle').onclick = toggleSidebar;
+  document.getElementById('sidebar-backdrop').onclick = closeSidebar;
+
+  // Mobile sidebar nav buttons (mirror desktop topbar buttons)
+  document.getElementById('btn-dashboard-mob').onclick = () => { closeSidebar(); Dashboard.show(); };
+  document.getElementById('btn-adhoc-mob').onclick = () => { closeSidebar(); App.adhocRunModal(); };
+  document.getElementById('btn-import-mob').onclick = () => { closeSidebar(); App.importTemplateModal(); };
+
   // Top bar buttons
-  document.getElementById('btn-chat').onclick = () => Chat.show();
+  document.getElementById('btn-chat').onclick = () => { closeSidebar(); Chat.show(); };
   document.getElementById('btn-dashboard').onclick = () => Dashboard.show();
   document.getElementById('btn-import-agent').onclick = () => App.importTemplateModal();
-  document.getElementById('btn-new-template').onclick = () => App.newTemplateModal();
+  document.getElementById('btn-new-template').onclick = () => { closeSidebar(); App.newTemplateModal(); };
   document.getElementById('btn-adhoc-run').onclick = () => App.adhocRunModal();
   document.getElementById('btn-welcome-new').onclick = () => App.newTemplateModal();
   document.getElementById('btn-welcome-adhoc').onclick = () => App.adhocRunModal();
