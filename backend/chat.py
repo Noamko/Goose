@@ -7,16 +7,25 @@ from openai import AsyncOpenAI
 from .database import create_template, list_templates
 from .tools import TOOLS
 
-_client: AsyncOpenAI | None = None
+_openai_client: AsyncOpenAI | None = None
+_anthropic_client: AsyncOpenAI | None = None
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI()
-    return _client
+def _get_client(model: str) -> AsyncOpenAI:
+    global _openai_client, _anthropic_client
+    if model.startswith("claude"):
+        if _anthropic_client is None:
+            _anthropic_client = AsyncOpenAI(
+                base_url="https://api.anthropic.com/v1/",
+                api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+            )
+        return _anthropic_client
+    else:
+        if _openai_client is None:
+            _openai_client = AsyncOpenAI()
+        return _openai_client
 
 
 # ---------------------------------------------------------------------------
@@ -319,11 +328,12 @@ async def run_chat(messages: list[dict]) -> dict:
     chat_tools = _build_tools(tool_names, tool_lines)
 
     action = None
+    chat_model = os.environ.get("CHAT_MODEL", "gpt-4o")
 
     # Agentic loop — keep going until the model stops calling tools
     for _ in range(15):
-        response = await _get_client().chat.completions.create(
-            model="gpt-4o",
+        response = await _get_client(chat_model).chat.completions.create(
+            model=chat_model,
             messages=full_messages,
             tools=chat_tools,
             tool_choice="auto",

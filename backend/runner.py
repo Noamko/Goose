@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from datetime import datetime, timezone
 from typing import Callable, Awaitable
 
@@ -16,14 +17,23 @@ from .database import (
 )
 from .tools import execute_tool, get_tool_schemas
 
-_client: AsyncOpenAI | None = None
+_openai_client: AsyncOpenAI | None = None
+_anthropic_client: AsyncOpenAI | None = None
 
 
-def get_openai_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI()
-    return _client
+def _get_client(model: str) -> AsyncOpenAI:
+    global _openai_client, _anthropic_client
+    if model.startswith("claude"):
+        if _anthropic_client is None:
+            _anthropic_client = AsyncOpenAI(
+                base_url="https://api.anthropic.com/v1/",
+                api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+            )
+        return _anthropic_client
+    else:
+        if _openai_client is None:
+            _openai_client = AsyncOpenAI()
+        return _openai_client
 
 
 def _utcnow() -> str:
@@ -154,7 +164,7 @@ async def run_agent(
                 kwargs["tools"] = tool_schemas
                 kwargs["tool_choice"] = "auto"
 
-            response = await get_openai_client().chat.completions.create(**kwargs)
+            response = await _get_client(model).chat.completions.create(**kwargs)
             if response.usage:
                 total_prompt_tokens += response.usage.prompt_tokens
                 total_completion_tokens += response.usage.completion_tokens
