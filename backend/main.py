@@ -23,6 +23,7 @@ from .database import (
     get_run,
     get_secret_keys,
     get_template,
+    get_usage_stats,
     init_db,
     list_runs,
     list_schedules,
@@ -70,7 +71,7 @@ async def _run_due_schedules():
         template = await get_template(sched["template_id"])
         if not template:
             continue
-        run_id = await create_run(sched["template_id"], template["name"], sched["goal"])
+        run_id = await create_run(sched["template_id"], template["name"], sched["goal"], template.get("model", "gpt-4o"))
         await mark_schedule_ran(sched["id"])
         secrets = await vault.get_secrets(sched["template_id"])
         tmpl = dict(template)
@@ -109,7 +110,7 @@ async def _tg_start_run(template_id: str, template_name: str, goal: str) -> str:
     template = await get_template(template_id)
     if not template:
         raise ValueError(f"Template {template_id} not found")
-    run_id = await create_run(template_id, template_name, goal)
+    run_id = await create_run(template_id, template_name, goal, template.get("model", "gpt-4o"))
     secrets = await vault.get_secrets(template_id)
     tmpl = dict(template)
     tmpl["_user_goal"] = goal
@@ -362,7 +363,7 @@ async def api_start_run(data: dict):
         }
         template_name = "Ad-hoc"
 
-    run_id = await create_run(template_id, template_name, goal)
+    run_id = await create_run(template_id, template_name, goal, template.get("model", "gpt-4o"))
     secrets = await vault.get_secrets(template_id) if template_id else {}
     tmpl = dict(template)
     tmpl["_user_goal"] = goal
@@ -408,7 +409,7 @@ async def api_continue_run(run_id: str, data: dict):
             prior_messages.append({"role": ev["role"], "content": ev["content"]})
     prior_messages.append({"role": "user", "content": user_message})
 
-    new_run_id = await create_run(template_id, template["name"], user_message)
+    new_run_id = await create_run(template_id, template["name"], user_message, template.get("model", "gpt-4o"))
     secrets = await vault.get_secrets(template_id)
     tmpl = dict(template)
     tmpl["_user_goal"] = user_message
@@ -479,6 +480,15 @@ async def api_list_widgets():
 async def api_delete_widget(widget_id: str):
     await delete_widget(widget_id)
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# REST — Usage & Costs
+# ---------------------------------------------------------------------------
+
+@app.get("/api/usage")
+async def api_usage():
+    return await get_usage_stats()
 
 
 # ---------------------------------------------------------------------------

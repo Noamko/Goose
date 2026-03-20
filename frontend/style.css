@@ -1132,6 +1132,111 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ================================================================
+   USAGE & COSTS
+   ================================================================ */
+
+.usage-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.usage-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+.usage-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.usage-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usage-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.usage-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1.1;
+}
+
+.usage-card-sub {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.usage-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.usage-table-wrap {
+  overflow-x: auto;
+}
+
+.usage-table-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.usage-table th {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border2);
+  color: var(--text3);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.usage-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+
+.usage-table tr:last-child td { border-bottom: none; }
+.usage-table tr:hover td { background: var(--bg3); }
+
+.usage-cost { color: var(--green); font-weight: 600; }
+
+/* ================================================================
    MOBILE NAV (sidebar top section, desktop hidden)
    ================================================================ */
 
@@ -1241,6 +1346,8 @@ body {
   /* Dashboard */
   .dashboard-view { padding: 16px; }
   .widget-grid { grid-template-columns: 1fr; }
+  .usage-breakdown { grid-template-columns: 1fr; }
+  .usage-summary { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 
   /* Schedule form: stack on small screens */
   .add-schedule-form { flex-direction: column; }

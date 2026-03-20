@@ -317,7 +317,7 @@ async def run_agent(
                             result = f"No agent named '{agent_name}' found."
                             status = "error"
                         else:
-                            child_run_id = await create_run(target["id"], target["name"], goal)
+                            child_run_id = await create_run(target["id"], target["name"], goal, target.get("model", "gpt-4o"))
                             child_template = dict(target)
                             child_template["_user_goal"] = goal
 

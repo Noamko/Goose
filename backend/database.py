@@ -79,6 +79,7 @@ _MIGRATIONS = [
     "ALTER TABLE templates ADD COLUMN model TEXT NOT NULL DEFAULT 'gpt-4o'",
     "ALTER TABLE templates ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE runs ADD COLUMN token_usage TEXT",
+    "ALTER TABLE runs ADD COLUMN model TEXT NOT NULL DEFAULT 'gpt-4o'",
 ]
 
 
@@ -199,17 +200,108 @@ async def get_run(run_id: str) -> dict | None:
             return dict(row) if row else None
 
 
-async def create_run(template_id: str | None, template_name: str | None, user_goal: str) -> str:
+async def create_run(
+    template_id: str | None,
+    template_name: str | None,
+    user_goal: str,
+    model: str = "gpt-4o",
+) -> str:
     rid = new_id()
     now = utcnow()
     async with aiosqlite.connect(DB_PATH, timeout=10) as db:
         await db.execute(
-            "INSERT INTO runs (id, template_id, template_name, status, user_goal, started_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (rid, template_id, template_name, "pending", user_goal, now, now),
+            "INSERT INTO runs (id, template_id, template_name, status, user_goal, model, started_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (rid, template_id, template_name, "pending", user_goal, model, now, now),
         )
         await db.commit()
     return rid
+
+
+async def get_usage_stats() -> dict:
+    """Aggregate token usage and estimated costs from completed runs."""
+    async with aiosqlite.connect(DB_PATH, timeout=10) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT template_name, model, token_usage, started_at "
+            "FROM runs WHERE status='completed' AND token_usage IS NOT NULL"
+        ) as cur:
+            rows = [dict(r) for r in await cur.fetchall()]
+
+    # Pricing per 1M tokens: {model: (input_price, output_price)}
+    PRICING = {
+        "claude-sonnet-4-6":        (3.00,  15.00),
+        "claude-opus-4-6":          (15.00, 75.00),
+        "claude-haiku-4-5-20251001": (0.80,  4.00),
+        "claude-haiku-4-5":         (0.80,  4.00),
+        "gpt-4o":                   (2.50,  10.00),
+        "gpt-4o-mini":              (0.15,   0.60),
+        "gpt-4-turbo":              (10.00, 30.00),
+    }
+
+    def cost_for(model: str, prompt: int, completion: int) -> float:
+        inp, out = PRICING.get(model, (2.50, 10.00))
+        return (prompt / 1_000_000) * inp + (completion / 1_000_000) * out
+
+    now = datetime.now(timezone.utc)
+    today = now.date().isoformat()
+    week_start = (now - timedelta(days=7)).isoformat()
+    month_start = now.replace(day=1).isoformat()
+
+    total_cost = month_cost = week_cost = today_cost = 0.0
+    total_prompt = total_completion = total_runs = 0
+    by_model: dict[str, dict] = {}
+    by_agent: dict[str, dict] = {}
+
+    for row in rows:
+        try:
+            usage = json.loads(row["token_usage"])
+            prompt = int(usage.get("prompt", 0))
+            completion = int(usage.get("completion", 0))
+        except Exception:
+            continue
+
+        model = row["model"] or "gpt-4o"
+        c = cost_for(model, prompt, completion)
+        started = row["started_at"] or ""
+
+        total_cost += c
+        total_prompt += prompt
+        total_completion += completion
+        total_runs += 1
+
+        if started[:10] == today:
+            today_cost += c
+        if started >= week_start:
+            week_cost += c
+        if started >= month_start:
+            month_cost += c
+
+        if model not in by_model:
+            by_model[model] = {"model": model, "runs": 0, "prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0}
+        by_model[model]["runs"] += 1
+        by_model[model]["prompt_tokens"] += prompt
+        by_model[model]["completion_tokens"] += completion
+        by_model[model]["cost"] += c
+
+        agent = row["template_name"] or "Ad-hoc"
+        if agent not in by_agent:
+            by_agent[agent] = {"template_name": agent, "runs": 0, "cost": 0.0}
+        by_agent[agent]["runs"] += 1
+        by_agent[agent]["cost"] += c
+
+    return {
+        "summary": {
+            "total_cost": round(total_cost, 4),
+            "month_cost": round(month_cost, 4),
+            "week_cost": round(week_cost, 4),
+            "today_cost": round(today_cost, 4),
+            "total_tokens": total_prompt + total_completion,
+            "total_runs": total_runs,
+        },
+        "by_model": sorted(by_model.values(), key=lambda x: x["cost"], reverse=True),
+        "by_agent": sorted(by_agent.values(), key=lambda x: x["cost"], reverse=True)[:10],
+    }
 
 
 async def update_run_status(run_id: str, status: str, result: str = None, error: str = None):

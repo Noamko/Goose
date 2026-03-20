@@ -477,6 +477,10 @@ const Dashboard = {
   },
 
   async load() {
+    await Promise.all([Dashboard._loadUsage(), Dashboard._loadWidgets()]);
+  },
+
+  async _loadWidgets() {
     let widgets = [];
     try { widgets = await API.get('/widgets'); } catch {}
     const grid = document.getElementById('widget-grid');
@@ -485,6 +489,81 @@ const Dashboard = {
       return;
     }
     grid.innerHTML = widgets.map(w => Dashboard._renderCard(w)).join('');
+  },
+
+  async _loadUsage() {
+    let usage = null;
+    try { usage = await API.get('/usage'); } catch {}
+    const summaryEl = document.getElementById('usage-summary');
+    const breakdownEl = document.getElementById('usage-breakdown');
+    if (!usage) {
+      summaryEl.innerHTML = '<div class="text-secondary text-sm">Could not load usage data.</div>';
+      breakdownEl.innerHTML = '';
+      return;
+    }
+    const s = usage.summary;
+
+    const fmt$ = (v) => v < 0.01 && v > 0 ? '<$0.01' : '$' + v.toFixed(2);
+    const fmtN = (v) => v >= 1_000_000 ? (v/1_000_000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : String(v);
+
+    summaryEl.innerHTML = `
+      <div class="usage-card">
+        <div class="usage-card-label">All Time</div>
+        <div class="usage-card-value">${fmt$(s.total_cost)}</div>
+        <div class="usage-card-sub">${s.total_runs} runs</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card-label">This Month</div>
+        <div class="usage-card-value">${fmt$(s.month_cost)}</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card-label">This Week</div>
+        <div class="usage-card-value">${fmt$(s.week_cost)}</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card-label">Today</div>
+        <div class="usage-card-value">${fmt$(s.today_cost)}</div>
+      </div>
+      <div class="usage-card">
+        <div class="usage-card-label">Total Tokens</div>
+        <div class="usage-card-value">${fmtN(s.total_tokens)}</div>
+      </div>
+    `;
+
+    const modelRows = (usage.by_model || []).map(m => `
+      <tr>
+        <td>${esc(m.model)}</td>
+        <td>${m.runs}</td>
+        <td>${fmtN(m.prompt_tokens)}</td>
+        <td>${fmtN(m.completion_tokens)}</td>
+        <td class="usage-cost">${fmt$(m.cost)}</td>
+      </tr>
+    `).join('');
+
+    const agentRows = (usage.by_agent || []).map(a => `
+      <tr>
+        <td>${esc(a.template_name)}</td>
+        <td>${a.runs}</td>
+        <td class="usage-cost">${fmt$(a.cost)}</td>
+      </tr>
+    `).join('');
+
+    breakdownEl.innerHTML = `
+      <div class="usage-table-wrap">
+        <div class="usage-table-title">By Model</div>
+        <table class="usage-table">
+          <thead><tr><th>Model</th><th>Runs</th><th>Input</th><th>Output</th><th>Cost</th></tr></thead>
+          <tbody>${modelRows || '<tr><td colspan="5" style="color:var(--text3)">No data yet</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div class="usage-table-wrap">
+        <div class="usage-table-title">By Agent</div>
+        <table class="usage-table">
+          <thead><tr><th>Agent</th><th>Runs</th><th>Cost</th></tr></thead>
+          <tbody>${agentRows || '<tr><td colspan="3" style="color:var(--text3)">No data yet</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
   },
 
   _renderCard(w) {
